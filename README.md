@@ -58,7 +58,7 @@ checking the visuals.
 | Median barrier cut; rescue wound down 19:30; SAR helicopter (Sjöfartsverket) | Smålandsposten |
 | **Modelled:** which units responded, base locations, dispatch/departure times, routes | OSRM; blue-light driving = 0.8 × car time |
 | **Modelled:** line 845 departure time; helicopter times (240 km/h from Ronneby); Lund/Linköping transfer times | — |
-| **Illustrative:** background flights at Småland Airport; transit timetables are synthetic | — |
+| **Illustrative:** background flights at Småland Airport; transit timetables are synthetic, thinned to a 30 min (45 min after 18:30) headway per line | — |
 
 Ambulance bases, fire and police stations, the Ronneby SAR base and Skärvet
 are approximate positions. They show a dashed ring on the map.

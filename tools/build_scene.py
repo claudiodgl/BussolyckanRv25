@@ -215,7 +215,22 @@ def bake_transit(src: Path, cities: dict, ids: list[str], t0: int, t1: int):
                 continue
             if t["arrive_minute"] < t0 or t["depart_minute"] > t1:
                 continue
+            if vt == "bus" and "sweep" in t["line_id"]:
+                continue  # synthetic coverage loops, not real lines
             used.setdefault(t["line_id"], []).append(t)
+        # The source timetable runs every bus line at a dense daytime
+        # frequency all evening. Thin it to a plausible Monday-evening
+        # service: 30 min headway per direction, 45 min after 18:30.
+        for lid, ts in used.items():
+            if ts[0]["vehicle_type"] != "bus":
+                continue
+            kept, last = [], {}
+            for t in sorted(ts, key=lambda q: q["depart_minute"]):
+                d, dep = t["direction"], t["depart_minute"]
+                gap = 30 if dep < 18 * 60 + 30 else 45
+                if dep - last.get(d, -1e9) >= gap:
+                    kept.append(t); last[d] = dep
+            used[lid] = kept
         by_id = {l["id"]: l for l in s["lines"]}
         for lid, ts in used.items():
             l = by_id.get(lid)

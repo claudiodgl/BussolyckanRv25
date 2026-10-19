@@ -1081,12 +1081,14 @@ function seek(tt) {
 }
 
 // ── Gantt ──────────────────────────────────────────────────────────────────
+let ganttRows = [], ganttHover = -1;
+const G_RH = 14, G_LW = 210;
 function drawGantt() {
   const wrap = document.getElementById('ganttWrap');
   if (wrap.classList.contains('hidden')) return;
   const cv = document.getElementById('gantt'), dpr = window.devicePixelRatio || 1;
-  const rows = [...document.querySelectorAll('.unit-row')].map(r => missions.find(m => m.id === r.dataset.id));
-  const RH = 14, LW = 210, W = wrap.clientWidth, H = rows.length * RH + 20;
+  const rows = ganttRows = [...document.querySelectorAll('.unit-row')].map(r => missions.find(m => m.id === r.dataset.id));
+  const RH = G_RH, LW = G_LW, W = wrap.clientWidth, H = rows.length * RH + 20;
   if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; cv.style.height = `${H}px`; }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
   const X = tt => LW + frac(tt) * (W - LW - 8);
@@ -1097,7 +1099,11 @@ function drawGantt() {
   }
   rows.forEach((m, r) => {
     const y = r * RH + 2;
-    g.fillStyle = '#cbd5e1'; g.fillText(`${VEH_ICON[m.vehicle]} ${pick(m, '')}`.slice(0, 34), 4, y + RH / 2);
+    if (S.follow === m.id || r === ganttHover) {
+      g.fillStyle = S.follow === m.id ? 'rgba(250,204,21,.22)' : 'rgba(148,163,184,.14)';
+      g.fillRect(0, y, W, RH);
+    }
+    g.fillStyle = S.follow === m.id ? '#facc15' : '#cbd5e1'; g.fillText(`${VEH_ICON[m.vehicle]} ${pick(m, '')}`.slice(0, 34), 4, y + RH / 2);
     for (const s of m.seq) {
       if (s.phase === 'idle' || s.phase === 'parked') continue;
       let c = s.phase === 'onscene' ? '#94a3b8' : s.phase === 'handover' ? '#475569' : s.phase === 'crashed' ? '#ef4444' : segColor(m, s);
@@ -1252,11 +1258,36 @@ function wireUI() {
     document.getElementById('btnGantt').classList.toggle('on', !w.classList.contains('hidden'));
     drawGantt();
   };
-  document.getElementById('gantt').addEventListener('click', ev => {
-    const r = ev.target.getBoundingClientRect(), LW = 210;
-    const f = (ev.clientX - r.left - LW) / (r.width - LW - 8);
-    if (f >= 0 && f <= 1) seek(T0() + f * (T1() - T0()));
+  // Per-unit timeline: click a unit's name to follow it; click one of its
+  // bars to jump there and follow it; click empty track to just seek.
+  const gcv = document.getElementById('gantt');
+  const ganttHit = ev => {
+    const r = gcv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+    const row = Math.floor((y - 2) / G_RH), m = ganttRows[row];
+    const f = (x - G_LW) / (r.width - G_LW - 8), tt = T0() + f * (T1() - T0());
+    const inBars = f >= 0 && f <= 1;
+    const seg = m && inBars ? m.seq.find(s => s.phase !== 'idle' && s.phase !== 'parked' && tt >= s.t0 - 1 && tt <= s.t1 + 1) : null;
+    return { row: m ? row : -1, m, label: x < G_LW, inBars, tt, seg };
+  };
+  gcv.addEventListener('click', ev => {
+    const h = ganttHit(ev);
+    if (h.m && h.label) { setFollow(S.follow === h.m.id ? null : h.m.id); drawGantt(); return; }
+    if (!h.inBars) return;
+    seek(h.tt);
+    if (h.seg) setTimeout(() => { setFollow(h.m.id); drawGantt(); }, 80);   // after a frame has posed it
   });
+  gcv.addEventListener('mousemove', ev => {
+    const h = ganttHit(ev);
+    if (h.row !== ganttHover) { ganttHover = h.row; drawGantt(); }
+    gcv.style.cursor = (h.m && (h.label || h.seg)) ? 'pointer' : h.inBars ? 'col-resize' : '';
+    if (!h.m) { gcv.title = ''; return; }
+    const what = h.seg ? `
+${clock(h.seg.t0)}–${clock(h.seg.t1)} · ${t('status_' + (h.seg.phase === 'onscene' ? 'onscene' : h.seg.phase))}`
+      + (h.seg.dest ? ` → ${placeName(h.seg.dest)}` : '') : '';
+    gcv.title = `${pick(h.m, '')}${what}
+${h.label ? t('tip_follow') : h.seg ? t('gantt_seg_tip') : ''}`;
+  });
+  gcv.addEventListener('mouseleave', () => { ganttHover = -1; drawGantt(); });
   document.getElementById('btnLegend').onclick = () => {
     const L = document.getElementById('legend'); L.classList.toggle('hidden');
     document.getElementById('btnLegend').classList.toggle('on', !L.classList.contains('hidden'));

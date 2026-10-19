@@ -237,3 +237,40 @@ body.gantt-open .track-wrap { padding-left: 210px; }
   color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 body.gantt-open .gantt-head { display: block; }
 .gantt-wrap { scrollbar-gutter: stable; }
+
+#btnFocus .sm { display: none; }
+
+/* ── Phone: less text, more map ───────────────────────────── */
+@media (max-width: 760px) {
+  .title-card { top: 8px; left: 8px; right: 8px; padding: 8px 12px; }
+  .title-card h1 { font-size: 14.5px; }
+  .subtitle, .daynight { display: none; }
+  .clock-row { margin-top: 4px; gap: 10px; }
+  .clock { font-size: 26px; }
+  .clock-date { font-size: 11.5px; }
+  .tally { font-size: 11px; grid-auto-flow: column; gap: 8px; }
+  .tally b { font-size: 12.5px; min-width: 0; margin-right: 3px; }
+  .lang-switch button { padding: 2px 8px; font-size: 11.5px; }
+
+  .story-panel { left: 8px; right: 8px; bottom: calc(var(--tl-h, 120px) + 16px); max-height: 30vh; padding: 10px 12px; }
+  .event-card { border-bottom: none; padding-bottom: 0; cursor: pointer; }
+  .event-card h3 { font-size: 15px; margin: 4px 0 3px; }
+  .event-card p { font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .event-card .src, .event-card .tr { display: none; }
+  .event-card.expanded p { display: block; -webkit-line-clamp: unset; }
+  .event-card.expanded .src { display: block; }
+  .story-panel .compact-btn { display: none; }
+
+  .timeline { left: 8px; right: 8px; bottom: 8px; padding: 8px 10px 6px; }
+  .controls { gap: 6px 8px; }
+  .btn-play { width: 34px; height: 34px; font-size: 14px; }
+  .speed button { padding: 4px 7px; font-size: 12px; }
+  .toggle { font-size: 12px; }
+  .chip { font-size: 12px; padding: 3px 9px; }
+  #btnGantt, #btnLegend, .controls .credit { display: none; }
+  .track-wrap { margin-top: 4px; }
+  .follow-chip { top: auto; bottom: calc(var(--tl-h, 120px) + 16px); }
+  #btnFocus .lg { display: none; }
+  #btnFocus .sm { display: inline; }
+  .maplibregl-ctrl-bottom-right { bottom: auto; top: 96px; }
+}

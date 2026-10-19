@@ -66,7 +66,7 @@ are approximate positions. They show a dashed ring on the map.
 ## Author
 
 **Claudio D. G. Linhares**, Associate Professor, Department of Computer Science
-and Media Technology, Linnaeus University, Växjö (ISOVIS group).
+and Media Technology, Linnaeus University, Växjö.
 <claudio.linhares@lnu.se> · [website](https://sites.google.com/view/claudiodglinhares) ·
 [ORCID 0000-0001-7012-4461](https://orcid.org/0000-0001-7012-4461)
 

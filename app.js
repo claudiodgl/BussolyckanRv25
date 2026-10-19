@@ -27,7 +27,7 @@ const CITY_BUS_COLOR = { vaxjo: 0x00923f, karlskrona: 0xe30613, lund: 0xce1141, 
 // ── State ───────────────────────────────────────────────────────────────────
 const S = {
   scene: null, t: 0, playing: false, speed: 1, story: true,
-  follow: null, lastUserInput: 0, dwellUntil: 0, lastEventIdx: -1, lastTrailT: -1, lastTrailReal: 0,
+  autoCam: true, follow: null, lastUserInput: 0, dwellUntil: 0, lastEventIdx: -1, lastTrailT: -1, lastTrailReal: 0,
 };
 let map, O, OS;                 // map, origin MercatorCoordinate, metres→mercator scale
 const routes = {};              // name → { ll, cum, x, z, lc }
@@ -655,7 +655,7 @@ function transportsNow() {
   return out;
 }
 function directorTick(now) {
-  if (!S.story || !S.playing || S.follow || S.t < DIRECTOR_FROM) return;
+  if (!S.story || !S.autoCam || !S.playing || S.follow || S.t < DIRECTOR_FROM) return;
   if (now < S.dwellUntil - 1500 || now < _dirNext || now - S.lastUserInput < 6000) return;
   if (map.isMoving() && now > _dirUntil) return;      // someone else's flight
   const tr = transportsNow();
@@ -817,6 +817,15 @@ function camera(name) {
   }
 }
 
+/** Event-driven camera moves; skipped when the viewer has turned off the
+ *  automatic camera (the 🎯 button still works on demand). */
+function autoCamera(name) { if (S.autoCam) camera(name); }
+function setAutoCam(on) {
+  S.autoCam = on;
+  try { localStorage.setItem('rv25.autocam', on ? '1' : '0'); } catch (_) { /* ignore */ }
+  const cb = document.getElementById('chkAutoCam'); if (cb) cb.checked = on;
+  if (!on && map.isMoving()) map.stop();
+}
 function setFollow(id) {
   S.follow = id;
   const chip = document.getElementById('followChip');
@@ -1003,7 +1012,7 @@ function buildChapters() {
     const strip = s => s.replace(/^\d\d[.:]\d\d – /, '');
     li.title = `${clock(e.t)} ${pick(e, 'title')}`;
     li.innerHTML = `<span class="tt">${clock(e.t)}</span><span>${strip(pick(e, 'title'))}${bilingual() ? `<em class="tr-li">${strip(e.title_en)}</em>` : ''}</span>`;
-    li.onclick = () => { seek(e.t + 0.01); S.lastEventIdx = i; showCard(i, true); camera(e.cam); };
+    li.onclick = () => { seek(e.t + 0.01); S.lastEventIdx = i; showCard(i, true); autoCamera(e.cam); };
     ol.appendChild(li);
   });
   buildTicks();
@@ -1059,7 +1068,7 @@ function initTrack() {
   track.addEventListener('pointerup', () => {
     drag = false;
     const i = currentEventIdx(S.t); S.lastEventIdx = i; showCard(i, true);
-    if (S.story && i >= 0) camera(events[i].cam);
+    if (S.story && i >= 0) autoCamera(events[i].cam);
   });
 }
 function seek(tt) {
@@ -1141,7 +1150,7 @@ function tick(now) {
     if (i !== S.lastEventIdx && i >= 0 && events[i].t > prev - 1e-6) {
       S.lastEventIdx = i; showCard(i, true);
       if (S.story) {
-        camera(events[i].cam);
+        autoCamera(events[i].cam);
         S.dwellUntil = now + 1000 * Math.min(5.5, 2.5 + pick(events[i], 'body').length / 110) / Math.sqrt(S.speed);
       }
     }
@@ -1186,7 +1195,7 @@ function setPlaying(on) {
 function jumpEvent(dir) {
   const i = currentEventIdx(S.t - (dir < 0 ? 0.02 : 0)) + (dir > 0 ? 1 : (S.t - events[Math.max(0, currentEventIdx(S.t))]?.t < 0.5 ? -1 : 0));
   const k = Math.max(0, Math.min(events.length - 1, i));
-  seek(events[k].t + 0.01); S.lastEventIdx = k; showCard(k, true); camera(events[k].cam);
+  seek(events[k].t + 0.01); S.lastEventIdx = k; showCard(k, true); autoCamera(events[k].cam);
 }
 
 // ── UI wiring ──────────────────────────────────────────────────────────────
@@ -1223,6 +1232,10 @@ function wireUI() {
     document.querySelectorAll('#speedGroup button').forEach(q => q.classList.toggle('on', q === b));
   });
   document.getElementById('chkStory').onchange = e => { S.story = e.target.checked; };
+  let ac = true;
+  try { ac = localStorage.getItem('rv25.autocam') !== '0'; } catch (_) { /* private mode */ }
+  setAutoCam(ac);
+  document.getElementById('chkAutoCam').onchange = e => setAutoCam(e.target.checked);
   const modes = ['sv', 'en', 'both'];
   const applyLang = l => {
     setLang(l); relabelAll();
@@ -1265,6 +1278,7 @@ function wireUI() {
     else if (e.code === 'ArrowLeft') { e.preventDefault(); jumpEvent(-1); }
     else if (e.code === 'Escape') { setFollow(null); showAbout(false); }
     else if (e.code === 'KeyF') focusAction();
+    else if (e.code === 'KeyC') setAutoCam(!S.autoCam);
     else if (e.code === 'KeyT') setCompact(!document.body.classList.contains('compact'));
   });
   // A mouse/touch press on the map ends follow mode; the wheel only pauses

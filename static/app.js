@@ -258,7 +258,7 @@ function baseStyle() {
     version: 8,
     sources: {
       osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19,
-             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="#about">Claudio Linhares</a>' },
+             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
     },
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': '#0b1220' } },

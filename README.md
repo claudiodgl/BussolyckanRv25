@@ -20,6 +20,18 @@ Click a unit in the left panel to follow it. Click a chapter to jump to it.
 Apart from basemap tiles, the app runs offline. MapLibre and three.js are
 vendored in `static/vendor/`.
 
+## Live site
+
+**https://claudiodgl.github.io/BussolyckanRv25/**: GitHub Pages serves the
+`gh-pages` branch, which is a copy of `static/`. The app is front-end only,
+so `serve.py` is just a local convenience. To publish after committing a
+change on `main`:
+
+```bash
+git push origin main
+git subtree push --prefix static origin gh-pages
+```
+
 ## Rebuild the data
 
 ```bash

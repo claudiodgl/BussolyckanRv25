@@ -1254,7 +1254,7 @@ function wireUI() {
   try { ac = localStorage.getItem('rv25.autocam') !== '0'; } catch (_) { /* private mode */ }
   setAutoCam(ac);
   document.getElementById('chkAutoCam').onchange = e => setAutoCam(e.target.checked);
-  const modes = ['sv', 'en', 'both'];
+  const modes = ['sv', 'en'];
   const applyLang = l => {
     setLang(l); relabelAll();
     document.querySelectorAll('#langSwitch button').forEach(b => b.classList.toggle('on', b.dataset.lang === l));
@@ -1262,7 +1262,7 @@ function wireUI() {
   document.querySelectorAll('#langSwitch button').forEach(b => b.onclick = () => applyLang(b.dataset.lang));
   applyLang(langMode());
   window.addEventListener('keydown', e => {
-    if (e.code === 'KeyL' && e.target.tagName !== 'INPUT') applyLang(modes[(modes.indexOf(langMode()) + 1) % 3]);
+    if (e.code === 'KeyL' && e.target.tagName !== 'INPUT') applyLang(modes[(modes.indexOf(langMode()) + 1) % 2]);
   });
   document.getElementById('btnGantt').onclick = () => {
     const w = document.getElementById('ganttWrap'); w.classList.toggle('hidden');

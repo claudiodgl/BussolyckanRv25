@@ -1,6 +1,6 @@
 /**
  * emergency-geometry.js — merged, vertex-coloured meshes for the response
- * fleet. Same conventions as vehicle-geometry.js (EpiCity): metres, +Z is
+ * fleet. Same conventions as vehicle-geometry.js: metres, +Z is
  * forward, Y up, origin at ground under the vehicle centre.
  *
  *   buildAmbulance()   Swedish yellow/green Battenburg box ambulance

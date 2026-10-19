@@ -5,7 +5,7 @@ double-decker crash between Växjö and Alvesta. Everything happens on one
 map: the crash site, the ambulance runs to Växjö, Ljungby and Värnamo, the
 rescue helicopter flight to Karlskrona, onward transfers to Lund and
 Linköping, and the background traffic (buses, trams, trains, planes) taken
-from EpiCity. Swedish by default, with English available.
+(synthetic, illustrative). Swedish by default, with English available.
 
 ## Run
 
@@ -35,10 +35,10 @@ git subtree push --prefix static origin gh-pages
 ## Rebuild the data
 
 ```bash
-python tools/build_scene.py --epicity C:/Users/clliab/vis_projects/EpiCity
+python tools/build_scene.py --city-model C:/path/to/city-model
 ```
 
-This reads EpiCity's `data/<city>/city.json` (buildings) and
+This reads a city model's `data/<city>/city.json` (buildings) and
 `transport_schedule.json` (transit) for Växjö, Karlskrona, Lund and Linköping.
 It fetches road routes from OSRM once and caches them under `cache/`.
 All story content (places, unit plan, events) lives in that script.
@@ -58,7 +58,17 @@ checking the visuals.
 | Median barrier cut; rescue wound down 19:30; SAR helicopter (Sjöfartsverket) | Smålandsposten |
 | **Modelled:** which units responded, base locations, dispatch/departure times, routes | OSRM; blue-light driving = 0.8 × car time |
 | **Modelled:** line 845 departure time; helicopter times (240 km/h from Ronneby); Lund/Linköping transfer times | — |
-| **Illustrative:** background flights at Småland Airport; transit timetables are EpiCity's synthetic schedule | EpiCity |
+| **Illustrative:** background flights at Småland Airport; transit timetables are synthetic | — |
 
 Ambulance bases, fire and police stations, the Ronneby SAR base and Skärvet
 are approximate positions. They show a dashed ring on the map.
+
+## Author
+
+**Claudio D. G. Linhares**, Associate Professor, Department of Computer Science
+and Media Technology, Linnaeus University, Växjö (ISOVIS group).
+<claudio.linhares@lnu.se> · [website](https://sites.google.com/view/claudiodglinhares) ·
+[ORCID 0000-0001-7012-4461](https://orcid.org/0000-0001-7012-4461)
+
+This is an independent research and visualization project, not an official
+product of Region Kronoberg, the Police or the rescue services.

@@ -7,7 +7,7 @@
  * play / pause / scrub / jump are all just "set S.t".
  *
  * Coordinate frame for three.js: metres-ish local Mercator around the crash
- * site — x = east, z = south, y = up (same convention as EpiCity).
+ * site — x = east, z = south, y = up.
  */
 import * as THREE from 'three';
 import { t, pick, lang, langMode, bilingual, setLang, applyStatic } from './i18n.js';
@@ -252,13 +252,13 @@ function missionPose(m, tt, out) {
   return out;
 }
 
-// ── Map style (EpiCity grayscale OSM raster, darkened for dusk) ────────────
+// ── Map style (grayscale OSM raster, darkened for dusk) ────────────────────
 function baseStyle() {
   return {
     version: 8,
     sources: {
       osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19,
-             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · EpiCity' },
+             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="#about">Claudio Linhares</a>' },
     },
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': '#0b1220' } },
@@ -377,7 +377,7 @@ const _pose = {};
 let _slotScale = 1;   // spreads parked units as vehicles grow with zoom-out
 const vehLabels = new Map();   // mission id → maplibregl.Marker
 // Everything hoverable this frame: key → { kind, ref, x, y, z }. Keys are the
-// mission id, `trip:<i>` for EpiCity transit and `flight:<i>` for planes, so
+// mission id, `trip:<i>` for background transit and `flight:<i>` for planes, so
 // S.follow can point at any of them.
 let PICK = new Map(), _pickNext = new Map();
 let lastMVP = null;            // three.js clip matrix of the last frame (local → clip)
@@ -427,7 +427,7 @@ function updateVehicles() {
     }
   }
 
-  // Public transport from EpiCity --------------------------------------------
+  // Background public transport ----------------------------------------------
   const trips = S.scene.transit.trips;
   const busesOn = K.zoom >= 9.2;   // local buses vanish into blobs below this
   for (let i = 0; i < trips.length; i++) {
@@ -1204,8 +1204,10 @@ function buildLegend() {
 function relabelAll() {
   applyStatic(); buildLegend(); buildHospPanel(); buildUnitPanel(); buildChapters();
   showCard(S.lastEventIdx, false); refreshMarkerLabels(); updateLight(); updateUnitPanel(true);
-  document.getElementById('sourceList').innerHTML = [...new Set(events.flatMap(e => e.src.split(/;\s*/)))]
-    .map(s => `<li>${s}</li>`).join('');
+  // Publications only (skip 'time modelled' notes), sorted.
+  document.getElementById('sourceList').innerHTML = [...new Set(events.flatMap(e => e.src.split(/;\s*/))
+    .map(s => s.trim()).filter(s => s && !/modell|^tid|^time/i.test(s)))]
+    .sort((a, b) => a.localeCompare(b, 'sv')).map(s => `<li>${s}</li>`).join('');
   document.getElementById('btnPlay').title = t(S.playing ? 'pause' : 'play');
 }
 function wireUI() {
@@ -1240,14 +1242,22 @@ function wireUI() {
     const L = document.getElementById('legend'); L.classList.toggle('hidden');
     document.getElementById('btnLegend').classList.toggle('on', !L.classList.contains('hidden'));
   };
-  document.getElementById('btnAbout').onclick = () => document.getElementById('about').classList.remove('hidden');
-  document.getElementById('aboutClose').onclick = () => document.getElementById('about').classList.add('hidden');
+  const about = document.getElementById('about');
+  const showAbout = on => {
+    about.classList.toggle('hidden', !on);
+    if (!on && location.hash === '#about') history.replaceState(null, '', location.pathname + location.search);
+  };
+  document.getElementById('btnAbout').onclick = () => showAbout(true);
+  document.getElementById('aboutClose').onclick = () => showAbout(false);
+  about.addEventListener('click', e => { if (e.target === about) showAbout(false); });
+  window.addEventListener('hashchange', () => { if (location.hash === '#about') showAbout(true); });
+  if (location.hash === '#about') showAbout(true);
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
     if (e.code === 'Space') { e.preventDefault(); setPlaying(!S.playing); }
     else if (e.code === 'ArrowRight') { e.preventDefault(); jumpEvent(1); }
     else if (e.code === 'ArrowLeft') { e.preventDefault(); jumpEvent(-1); }
-    else if (e.code === 'Escape') { setFollow(null); document.getElementById('about').classList.add('hidden'); }
+    else if (e.code === 'Escape') { setFollow(null); showAbout(false); }
     else if (e.code === 'KeyF') focusAction();
     else if (e.code === 'KeyT') setCompact(!document.body.classList.contains('compact'));
   });

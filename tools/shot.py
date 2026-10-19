@@ -1,6 +1,6 @@
 """
 shot.py — headless-Chrome screenshots of the story map at given clock times
-(dev helper; run with the EpiCity venv python, which has `websockets`).
+(dev helper; needs a Python with `websockets`).
 
     python tools/shot.py OUT_DIR 16:20 16:45@crash_close 17:40@heli ...
 

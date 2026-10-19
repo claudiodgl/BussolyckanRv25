@@ -1,7 +1,7 @@
 """
 build_scene.py — one-shot data prep for the Rv25 story map.
 
-Reads EpiCity's cached city data (buildings, transit schedules) and bakes a
+Reads a cached city model (OSM buildings, transit schedules) and bakes a
 single regional scene for the 5 Oct 2026 bus accident on riksväg 25:
 
     static/data/scene.json        places, routes, missions, events, transit
@@ -11,7 +11,7 @@ Network access happens ONLY here (OSRM road routes, vendored JS libs) and
 everything is cached under cache/, so re-runs are offline. The browser app
 itself reads only static/ (basemap tiles excepted).
 
-    python tools/build_scene.py [--epicity C:/path/to/EpiCity]
+    python tools/build_scene.py --city-model C:/path/to/city-model
 """
 from __future__ import annotations
 
@@ -149,16 +149,16 @@ def hm(m):
     return f"{(m // 60) % 24:02d}:{m % 60:02d}"
 
 
-# ── EpiCity readers ──────────────────────────────────────────────────────────
-def epicity_cities(epi: Path) -> dict:
-    src = (epi / "osm.py").read_text(encoding="utf-8")
+# ── City-model readers ───────────────────────────────────────────────────────
+def model_cities(src: Path) -> dict:
+    src = (src / "osm.py").read_text(encoding="utf-8")
     tree = ast.parse(src)
     for node in tree.body:
         if isinstance(node, ast.AnnAssign) and getattr(node.target, "id", "") == "CITIES":
             return ast.literal_eval(node.value)
         if isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "CITIES" for t in node.targets):
             return ast.literal_eval(node.value)
-    raise RuntimeError("CITIES not found in EpiCity osm.py")
+    raise RuntimeError("CITIES not found in osm.py")
 
 
 def make_unproject(clat, clon):
@@ -168,10 +168,10 @@ def make_unproject(clat, clon):
     return f
 
 
-def bake_buildings(epi: Path, cities: dict, ids: list[str]):
+def bake_buildings(src: Path, cities: dict, ids: list[str]):
     feats = []
     for cid in ids:
-        cj = epi / "data" / cid / "city.json"
+        cj = src / "data" / cid / "city.json"
         if not cj.exists():
             print("  (skip buildings, missing)", cj)
             continue
@@ -198,11 +198,11 @@ def bake_buildings(epi: Path, cities: dict, ids: list[str]):
     return {"type": "FeatureCollection", "features": feats}
 
 
-def bake_transit(epi: Path, cities: dict, ids: list[str], t0: int, t1: int):
-    """Local buses/trams/trains from EpiCity schedules, restricted to [t0,t1]."""
+def bake_transit(src: Path, cities: dict, ids: list[str], t0: int, t1: int):
+    """Local buses/trams/trains from the city model's schedules, restricted to [t0,t1]."""
     lines, trips = [], []
     for cid in ids:
-        sp = epi / "data" / cid / "transport_schedule.json"
+        sp = src / "data" / cid / "transport_schedule.json"
         if not sp.exists():
             continue
         c = cities[cid]
@@ -478,9 +478,10 @@ EVENTS = [
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--epicity", default=str(Path(r"C:\Users\clliab\vis_projects\EpiCity")))
+    ap.add_argument("--city-model", required=True,
+                    help="folder with osm.py and data/<city>/{city.json,transport_schedule.json}")
     args = ap.parse_args()
-    epi = Path(args.epicity)
+    src = Path(args.city_model)
     OUT.mkdir(parents=True, exist_ok=True)
 
     print("vendor libs")
@@ -502,15 +503,14 @@ def main():
             print(f"  {m['id']:<12} {hm(tt[0]['t0'])} → {hm(tt[-1]['t1'])}  arrivals: " +
                   ", ".join(f"{a['place']}@{hm(a['t'])}" for a in m["arrivals"]))
 
-    print("EpiCity data")
-    cities = epicity_cities(epi)
+    print("city model")
+    cities = model_cities(src)
     bld_ids = ["vaxjo", "karlskrona", "lund", "linkoping"]
-    geo = bake_buildings(epi, cities, bld_ids)
+    geo = bake_buildings(src, cities, bld_ids)
     (OUT / "buildings.geojson").write_text(json.dumps(geo, separators=(",", ":")), encoding="utf-8")
-    lines, trips = bake_transit(epi, cities, bld_ids, 15 * 60 + 30, 24 * 60)
+    lines, trips = bake_transit(src, cities, bld_ids, 15 * 60 + 30, 24 * 60)
 
-    # Flights at Småland Airport (illustrative evening bank — EpiCity's
-    # plane schedule is synthetic too).
+    # Flights at Småland Airport (illustrative evening bank).
     airport = [14.7280, 56.9291]
     flights = [  # [minute, 'dep'|'arr', bearing_deg, sv/en destination]
         [16 * 60 + 5, "arr", 35, "Stockholm Bromma"], [16 * 60 + 40, "dep", 35, "Stockholm Bromma"],

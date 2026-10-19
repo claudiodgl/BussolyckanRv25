@@ -1,8 +1,8 @@
 /**
- * vehicle-geometry.js — 3D vehicle meshes lifted verbatim from EpiCity
+ * vehicle-geometry.js — 3D vehicle meshes shared with the author's city-simulation work
  * (static/transport.js: palettes + _build*Geometry). Each builder returns a
  * single merged BufferGeometry with per-vertex colour, +Z = forward, Y = up,
- * in metres. Do not edit here without porting back; see EpiCity for history.
+ * in metres. Kept in sync with the upstream copy.
  */
 import * as THREE from 'three';
 

@@ -775,7 +775,11 @@ function updateUnitPanel(force) {
 // ── Story: events, cards, camera ───────────────────────────────────────────
 function padding() {
   const w = window.innerWidth;
-  if (w < 760) return { top: 150, bottom: 340, left: 10, right: 10 };
+  if (w < 760) {   // phone: keep the action between the title card and the story card
+    const tc = document.querySelector('.title-card').getBoundingClientRect();
+    const sp = document.querySelector('.story-panel').getBoundingClientRect();
+    return { top: Math.round(tc.bottom) + 6, bottom: Math.round(window.innerHeight - sp.top) + 6, left: 10, right: 10 };
+  }
   if (w < 1100) return { top: 30, bottom: 150, left: 330, right: 330 };
   const right = document.body.classList.contains('compact') ? 110 : 410;
   return { top: 30, bottom: 160, left: 420, right };
@@ -1033,6 +1037,7 @@ function showCard(i, animate) {
       <span class="time">${clock(e.t)}${e.kind === 'est' ? ' ≈' : ''}</span></div>
       <h3>${pick(e, 'title')}</h3><p>${pick(e, 'body')}</p>${bilingual() ? `<div class="tr"><span>${t('translation')}</span><h4>${e.title_en}</h4><p>${e.body_en}</p></div>` : ''}<div class="src">${t('source')}: ${e.src}</div>`;
   }
+  card.classList.remove('expanded');
   if (animate) { card.classList.remove('enter'); void card.offsetWidth; card.classList.add('enter'); }
   document.querySelectorAll('#chapterList li').forEach((li, j) => {
     li.classList.toggle('past', j < i); li.classList.toggle('cur', j === i);
@@ -1343,6 +1348,17 @@ ${h.label ? t('tip_follow') : h.seg ? t('gantt_seg_tip') : ''}`;
   });
   document.querySelector('#followChip button').onclick = () => setFollow(null);
   document.getElementById('btnFocus').onclick = focusAction;
+  // Phone: story card shows two lines; tap it to read the rest. The card
+  // sits on top of the timeline, whose height is tracked in --tl-h.
+  document.getElementById('eventCard').addEventListener('click', e => {
+    if (window.innerWidth < 760) e.currentTarget.classList.toggle('expanded');
+  });
+  const tl = document.querySelector('footer.timeline');
+  const syncTl = () => {
+    document.documentElement.style.setProperty('--tl-h', `${tl.offsetHeight}px`);
+    map.setPadding(padding());
+  };
+  new ResizeObserver(syncTl).observe(tl); syncTl();
   document.getElementById('btnCompact').onclick = () => setCompact(!document.body.classList.contains('compact'));
   map.on('zoomend', refreshMarkerLabels);
   window.addEventListener('resize', () => { map.setPadding(padding()); drawGantt(); });

@@ -229,3 +229,11 @@ body.compact .chapter-list li { grid-template-columns: 1fr; padding: 6px 4px; te
 .controls .credit b { color: #e2e8f0; font-weight: 600; }
 .controls .credit:hover b { text-decoration: underline; }
 @media (max-width: 1100px) { .controls .credit { margin-left: 0; } }
+
+/* Gantt open: main track shifts right so its time axis sits exactly above the unit bars */
+.track-wrap { position: relative; transition: padding-left .25s ease; }
+body.gantt-open .track-wrap { padding-left: 210px; }
+.gantt-head { display: none; position: absolute; left: 4px; bottom: 2px; width: 200px; font-size: 11px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+body.gantt-open .gantt-head { display: block; }
+.gantt-wrap { scrollbar-gutter: stable; }

@@ -1082,20 +1082,32 @@ function seek(tt) {
 
 // ── Gantt ──────────────────────────────────────────────────────────────────
 let ganttRows = [], ganttHover = -1;
-const G_RH = 14, G_LW = 210;
+const G_RH = 14, G_LW = 210;   // G_LW matches body.gantt-open .track-wrap padding
+/** time → x on the Gantt canvas, aligned to the main track's pixels. */
+function ganttX() {
+  const tr = document.getElementById('track').getBoundingClientRect();
+  const cr = document.getElementById('gantt').getBoundingClientRect();
+  const x0 = tr.left - cr.left, w = tr.width;
+  const X = tt => x0 + frac(tt) * w;
+  X.inv = x => T0() + (x - x0) / w * (T1() - T0());
+  X.x0 = x0;
+  return X;
+}
 function drawGantt() {
   const wrap = document.getElementById('ganttWrap');
   if (wrap.classList.contains('hidden')) return;
   const cv = document.getElementById('gantt'), dpr = window.devicePixelRatio || 1;
   const rows = ganttRows = [...document.querySelectorAll('.unit-row')].map(r => missions.find(m => m.id === r.dataset.id));
-  const RH = G_RH, LW = G_LW, W = wrap.clientWidth, H = rows.length * RH + 20;
+  const W = cv.clientWidth || wrap.clientWidth, H = rows.length * G_RH + 6, RH = G_RH;
   if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; cv.style.height = `${H}px`; }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-  const X = tt => LW + frac(tt) * (W - LW - 8);
+  const X = ganttX();   // same pixels as the main track above
   g.font = '10.5px Segoe UI, sans-serif'; g.textBaseline = 'middle';
   for (let h = Math.ceil(T0() / 60); h <= Math.floor(T1() / 60); h++) {
-    g.fillStyle = 'rgba(148,163,184,.15)'; g.fillRect(X(h * 60), 0, 1, H - 14);
-    g.fillStyle = '#94a3b8'; g.fillText(clock(h * 60), X(h * 60) - 12, H - 7);
+    g.fillStyle = 'rgba(148,163,184,.15)'; g.fillRect(X(h * 60), 0, 1, H);
+  }
+  for (const e of events) {   // faint guides under the event ticks
+    g.fillStyle = e.estimated ? 'rgba(245,158,11,.10)' : 'rgba(34,197,94,.10)'; g.fillRect(X(e.t), 0, 1, H);
   }
   rows.forEach((m, r) => {
     const y = r * RH + 2;
@@ -1115,7 +1127,7 @@ function drawGantt() {
     }
     g.globalAlpha = 1;
   });
-  g.fillStyle = '#fff'; g.fillRect(X(S.t) - 1, 0, 2, H - 14);
+  g.fillStyle = '#fff'; g.fillRect(X(S.t) - 1, 0, 2, H);
 }
 
 // ── Day / night ────────────────────────────────────────────────────────────
@@ -1264,10 +1276,10 @@ function wireUI() {
   const ganttHit = ev => {
     const r = gcv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
     const row = Math.floor((y - 2) / G_RH), m = ganttRows[row];
-    const f = (x - G_LW) / (r.width - G_LW - 8), tt = T0() + f * (T1() - T0());
-    const inBars = f >= 0 && f <= 1;
+    const X = ganttX(), tt = X.inv(x);
+    const inBars = tt >= T0() && tt <= T1();
     const seg = m && inBars ? m.seq.find(s => s.phase !== 'idle' && s.phase !== 'parked' && tt >= s.t0 - 1 && tt <= s.t1 + 1) : null;
-    return { row: m ? row : -1, m, label: x < G_LW, inBars, tt, seg };
+    return { row: m ? row : -1, m, label: x < X.x0 - 4, inBars, tt, seg };
   };
   gcv.addEventListener('click', ev => {
     const h = ganttHit(ev);

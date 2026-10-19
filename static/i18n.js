@@ -9,7 +9,7 @@ const _strings = {
     weekday_mon: 'måndag', weekday_tue: 'tisdag', month_oct: 'oktober',
     play: 'Spela', pause: 'Pausa', speed: 'Hastighet',
     story_mode: 'Berättarläge', story_mode_tip: 'Kameran följer händelserna och pausar kort vid varje händelse',
-    lang_tip: 'Språk: svenska, engelska, eller svenska med engelsk översättning (tangent L)',
+    lang_tip: 'Språk: svenska eller engelska (tangent L)',
     translation: 'Engelsk översättning',
     documented: 'Dokumenterat', estimated: 'Uppskattat',
     documented_tip: 'Tid och innehåll enligt publicerade källor',
@@ -62,7 +62,7 @@ const _strings = {
     weekday_mon: 'Monday', weekday_tue: 'Tuesday', month_oct: 'October',
     play: 'Play', pause: 'Pause', speed: 'Speed',
     story_mode: 'Story mode', story_mode_tip: 'Camera follows the events and pauses briefly at each one',
-    lang_tip: 'Language: Swedish, English, or Swedish with English translation (key L)',
+    lang_tip: 'Language: Swedish or English (key L)',
     translation: 'English translation',
     documented: 'Documented', estimated: 'Estimated',
     documented_tip: 'Time and content from published sources',
@@ -112,7 +112,7 @@ const _strings = {
 };
 
 let _lang = 'sv';
-try { _lang = localStorage.getItem('rv25.lang') || 'sv'; } catch (_) { /* private mode */ }
+try { _lang = localStorage.getItem('rv25.lang') === 'en' ? 'en' : 'sv'; } catch (_) { /* private mode */ }
 
 // 'both' = Swedish UI with English translations under the story text.
 export function t(key) { return (_strings[_lang] && _strings[_lang][key]) ?? _strings.sv[key] ?? key; }

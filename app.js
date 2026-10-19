@@ -823,7 +823,31 @@ function camera(name) {
 
 /** Event-driven camera moves; skipped when the viewer has turned off the
  *  automatic camera (the 🎯 button still works on demand). */
-function autoCamera(name) { if (S.autoCam) camera(name); }
+function autoCamera(name) { if (S.autoCam && !busChaseWindow(S.t)) camera(name); }
+
+// ── Opening chase: ride along with line 845 from departure to the crash ────
+const busChaseWindow = tt => S.story && tt >= S.scene.meta.t_845_dep - 0.01 && tt < S.scene.meta.t_crash - 0.02;
+const _bc = { active: false, start: 0, from: null, bearing: 0, last: 0 };
+function busChaseTick(now) {
+  const m = missions.find(q => q.vehicle === 'bus845'), p = m && m._pose;
+  const on = p && S.autoCam && S.playing && !S.follow && busChaseWindow(S.t) && now - S.lastUserInput > 6000;
+  if (!on) { _bc.active = false; return; }
+  const target = Math.atan2(p.hx, -p.hz) * 180 / Math.PI, ctr = toLngLat(p.x, p.z);
+  if (!Number.isFinite(target) || !Number.isFinite(ctr.lng)) return;
+  if (!_bc.active) {   // blend in from wherever the camera is
+    map.stop();
+    const c = map.getCenter();
+    Object.assign(_bc, { active: true, start: now, last: now, bearing: target,
+      from: { lng: c.lng, lat: c.lat, zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() } });
+  }
+  const dt = Math.min(0.1, (now - _bc.last) / 1000); _bc.last = now;
+  _bc.bearing += (((target - _bc.bearing + 540) % 360) - 180) * Math.min(1, dt * 1.5);
+  const k = smooth(0, 1, (now - _bc.start) / 2200), f = _bc.from;
+  const lerp = (a, b) => a + (b - a) * k;
+  const db = ((_bc.bearing - f.bearing + 540) % 360) - 180;
+  map.jumpTo({ center: [lerp(f.lng, ctr.lng), lerp(f.lat, ctr.lat)], zoom: lerp(f.zoom, 14.8),
+               pitch: lerp(f.pitch, 60), bearing: f.bearing + db * k });
+}
 function setAutoCam(on) {
   S.autoCam = on;
   try { localStorage.setItem('rv25.autocam', on ? '1' : '0'); } catch (_) { /* ignore */ }
@@ -1154,6 +1178,7 @@ let lastReal = performance.now(), lastUi = 0, lastLight = -1;
  *  to real pace during the last ~1.5 min before each event. */
 function storyFactor(tt) {
   if (!S.story) return 1;
+  if (S.autoCam && busChaseWindow(tt)) return 1;
   const base = tt > 19 * 60 + 50 ? 5 : tt > 18 * 60 + 45 ? 2.5 : 1;
   const nxt = events.find(e => e.t > tt + 1e-6);
   const gap = nxt ? nxt.t - tt : Infinity;
@@ -1180,6 +1205,7 @@ function tick(now) {
     if (S.t >= T1()) setPlaying(false);
     directorTick(now);
   }
+  busChaseTick(now);
   // Follow: recentre, but never while the user is touching the map.
   if (S.follow) {
     const e = PICK.get(S.follow);
@@ -1334,7 +1360,7 @@ ${h.label ? t('tip_follow') : h.seg ? t('gantt_seg_tip') : ''}`;
   const cv = map.getCanvasContainer();
   const stopFollow = () => { if (S.follow) setFollow(null); };
   cv.addEventListener('mousedown', () => { S.lastUserInput = performance.now(); stopFollow(); });
-  cv.addEventListener('touchstart', stopFollow, { passive: true });
+  cv.addEventListener('touchstart', () => { S.lastUserInput = performance.now(); stopFollow(); }, { passive: true });
   cv.addEventListener('wheel', () => { S.lastUserInput = performance.now(); }, { passive: true });
   // Hover any vehicle for details; click it to follow (click empty map = release).
   cv.addEventListener('mousemove', ev => {

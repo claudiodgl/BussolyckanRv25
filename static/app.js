@@ -1118,25 +1118,31 @@ function updateLight() {
 
 // ── Main loop ──────────────────────────────────────────────────────────────
 let lastReal = performance.now(), lastUi = 0, lastLight = -1;
+/** Story-mode clock multiplier: fast through quiet stretches, easing down
+ *  to real pace during the last ~1.5 min before each event. */
 function storyFactor(tt) {
   if (!S.story) return 1;
-  if (tt < 16 * 60 + 24) return 2;
-  if (tt > 19 * 60 + 50) return 5;
-  if (tt > 18 * 60 + 45) return 2.5;
-  return 1;
+  const base = tt > 19 * 60 + 50 ? 5 : tt > 18 * 60 + 45 ? 2.5 : 1;
+  const nxt = events.find(e => e.t > tt + 1e-6);
+  const gap = nxt ? nxt.t - tt : Infinity;
+  return Math.max(base, 1 + 4 * smooth(1.5, 6, gap));
 }
+// While an event card is fresh the clock creeps in slow motion instead of
+// freezing, so e.g. the rollover plays out under its card.
+const DWELL_RATE = 0.12;
 function tick(now) {
   const dt = Math.min(0.1, (now - lastReal) / 1000); lastReal = now;
-  if (S.playing && now >= S.dwellUntil) {
+  if (S.playing) {
     const prev = S.t;
-    S.t = Math.min(T1(), S.t + dt * S.speed * storyFactor(S.t));
+    const rate = now < S.dwellUntil ? DWELL_RATE * Math.min(1, S.speed) : S.speed * storyFactor(S.t);
+    S.t = Math.min(T1(), S.t + dt * rate);
     // Event crossing → card, camera, short dwell.
     const i = currentEventIdx(S.t);
     if (i !== S.lastEventIdx && i >= 0 && events[i].t > prev - 1e-6) {
       S.lastEventIdx = i; showCard(i, true);
       if (S.story) {
         camera(events[i].cam);
-        S.dwellUntil = now + 1000 * Math.min(9, 3.5 + pick(events[i], 'body').length / 70) / Math.sqrt(S.speed);
+        S.dwellUntil = now + 1000 * Math.min(5.5, 2.5 + pick(events[i], 'body').length / 110) / Math.sqrt(S.speed);
       }
     }
     if (S.t >= T1()) setPlaying(false);

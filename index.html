@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bussolyckan Rv 25</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map"></div>
+
+<header class="title-card">
+  <div class="title-row">
+    <div>
+      <h1 data-i18n="title">Bussolyckan på riksväg 25</h1>
+      <p class="subtitle" data-i18n="subtitle"></p>
+    </div>
+    <div id="langSwitch" class="lang-switch" data-i18n-title="lang_tip">
+      <button data-lang="sv">SV</button><button data-lang="en">EN</button><button data-lang="both">SV+EN</button>
+    </div>
+  </div>
+  <div class="clock-row">
+    <div id="clock" class="clock">16:10</div>
+    <div class="clock-meta">
+      <div id="clockDate" class="clock-date"></div>
+      <div id="dayNight" class="daynight"></div>
+    </div>
+    <div class="tally">
+      <div><b id="tallyAffected">40+</b><span data-i18n="affected"></span></div>
+      <div><b id="tallySerious">~10</b><span data-i18n="serious"></span></div>
+      <div><b id="tallyKilled">1</b><span data-i18n="killed"></span></div>
+    </div>
+  </div>
+</header>
+
+<aside class="left-panel">
+  <section class="panel">
+    <h2 data-i18n="hospitals"></h2>
+    <div id="hospList" class="hosp-list"></div>
+  </section>
+  <section class="panel units-panel">
+    <h2 data-i18n="units"></h2>
+    <div id="unitList" class="unit-list"></div>
+  </section>
+</aside>
+
+<div id="followChip" class="follow-chip hidden"><span></span><button>✕</button></div>
+<div id="selRing" class="veh-ring sel hidden"></div><div id="hoverRing" class="veh-ring hover hidden"></div>
+<div id="vehTip" class="veh-tip hidden"></div>
+
+<aside class="story-panel">
+  <button id="btnCompact" class="compact-btn">⟩</button>
+  <div id="eventCard" class="event-card"></div>
+  <ol id="chapterList" class="chapter-list"></ol>
+  <p class="hint" data-i18n="hint_keys"></p>
+</aside>
+
+<div class="legend panel hidden" id="legend"></div>
+
+<footer class="timeline">
+  <div class="controls">
+    <button id="btnPlay" class="btn-play" data-i18n-title="play">▶</button>
+    <div class="speed" id="speedGroup">
+      <button data-speed="0.5">½×</button><button data-speed="1" class="on">1×</button>
+      <button data-speed="2">2×</button><button data-speed="4">4×</button><button data-speed="10">10×</button>
+    </div>
+    <label class="toggle" data-i18n-title="story_mode_tip">
+      <input type="checkbox" id="chkStory" checked> <span data-i18n="story_mode"></span>
+    </label>
+    <button id="btnFocus" class="chip focus" data-i18n="focus" data-i18n-title="focus_tip"></button>
+    <button id="btnGantt" class="chip" data-i18n="gantt" data-i18n-title="gantt_tip"></button>
+    <button id="btnLegend" class="chip" data-i18n="legend"></button>
+    <button id="btnAbout" class="chip" data-i18n="about"></button>
+  </div>
+  <div class="track-wrap">
+    <div id="track" class="track">
+      <div id="trackFill" class="track-fill"></div>
+      <div id="trackTicks"></div>
+      <div id="trackHours"></div>
+      <div id="playhead" class="playhead"></div>
+    </div>
+  </div>
+  <div id="ganttWrap" class="gantt-wrap hidden"><canvas id="gantt"></canvas></div>
+</footer>
+
+<div id="about" class="modal hidden">
+  <div class="modal-body">
+    <h2 data-i18n="about"></h2>
+    <p data-i18n="about_body"></p>
+    <ul id="sourceList" class="source-list"></ul>
+    <button id="aboutClose" class="chip" data-i18n="close"></button>
+  </div>
+</div>
+
+<div id="loading" class="loading" data-i18n="loading">Laddar karta…</div>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three.module.js" } }
+</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

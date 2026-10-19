@@ -111,8 +111,9 @@ const _strings = {
   },
 };
 
-let _lang = 'sv';
-try { _lang = localStorage.getItem('rv25.lang') === 'en' ? 'en' : 'sv'; } catch (_) { /* private mode */ }
+// Always opens in Swedish; English only for this visit when picked, or via
+// a ?lang=en link.
+let _lang = new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'sv';
 
 // 'both' = Swedish UI with English translations under the story text.
 export function t(key) { return (_strings[_lang] && _strings[_lang][key]) ?? _strings.sv[key] ?? key; }
@@ -122,7 +123,6 @@ export function bilingual() { return _lang === 'both'; }
 export function pick(obj, base) { return obj[`${base}_${_lang}`] ?? obj[`${base}_sv`] ?? obj[_lang] ?? obj.sv ?? ''; }
 export function setLang(l) {
   _lang = l;
-  try { localStorage.setItem('rv25.lang', l); } catch (_) { /* ignore */ }
   document.documentElement.lang = l === 'en' ? 'en' : 'sv';
   applyStatic();
 }

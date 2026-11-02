@@ -23,5 +23,5 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     h = functools.partial(Handler, directory=str(STATIC))
     with http.server.ThreadingHTTPServer(("127.0.0.1", PORT), h) as srv:
-        print(f"Rv 25 story map → http://127.0.0.1:{PORT}")
+        print(f"Rv 25 story map -> http://127.0.0.1:{PORT}")
         srv.serve_forever()

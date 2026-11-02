@@ -27,8 +27,12 @@ const CITY_BUS_COLOR = { vaxjo: 0x00923f, karlskrona: 0xe30613, lund: 0xce1141, 
 // ── State ───────────────────────────────────────────────────────────────────
 const S = {
   scene: null, t: 0, playing: false, speed: 1, story: true,
-  autoCam: true, follow: null, lastUserInput: 0, dwellUntil: 0, lastEventIdx: -1, lastTrailT: -1, lastTrailReal: 0,
+  autoCam: true, fixedCam: false, follow: null, lastUserInput: 0, dwellUntil: 0, lastEventIdx: -1, lastTrailT: -1, lastTrailReal: 0,
 };
+// Fixed camera: every shot keeps the angle of the closing overview (north up,
+// low pitch); only centre and zoom change, and only the bus 845 run is tracked.
+const FIXED_ANGLE = { pitch: 15, bearing: 0 };
+const ang = (pitch, bearing) => S.fixedCam ? { ...FIXED_ANGLE } : { pitch, bearing };
 let map, O, OS;                 // map, origin MercatorCoordinate, metres→mercator scale
 const routes = {};              // name → { ll, cum, x, z, lc }
 let missions = [];
@@ -655,7 +659,7 @@ function transportsNow() {
   return out;
 }
 function directorTick(now) {
-  if (!S.story || !S.autoCam || !S.playing || S.follow || S.t < DIRECTOR_FROM) return;
+  if (!S.story || !S.autoCam || S.fixedCam || !S.playing || S.follow || S.t < DIRECTOR_FROM) return;
   if (now < S.dwellUntil - 1500 || now < _dirNext || now - S.lastUserInput < 6000) return;
   if (map.isMoving() && now > _dirUntil) return;      // someone else's flight
   const tr = transportsNow();
@@ -788,12 +792,12 @@ function flyToPlaces(ids, maxZoom = 13, opts = {}) {
   const pts = ids.map(id => { const p = S.scene.places[id]; return [p.lon, p.lat]; });
   const b = new maplibregl.LngLatBounds(pts[0], pts[0]);
   for (const q of pts) b.extend(q);
-  map.fitBounds(b, { padding: 50, maxZoom, duration: 2600, pitch: opts.pitch ?? 45, bearing: opts.bearing ?? 0, essential: true });
+  map.fitBounds(b, { padding: 50, maxZoom, duration: 2600, ...ang(opts.pitch ?? 45, opts.bearing ?? 0), essential: true });
 }
 function camera(name) {
   if (S.follow) return;
   const P = S.scene.places, c = [P.crash.lon, P.crash.lat];
-  const fly = (center, zoom, pitch, bearing) => map.flyTo({ center, zoom, pitch, bearing, duration: 2800, essential: true });
+  const fly = (center, zoom, pitch, bearing) => map.flyTo({ center, zoom, ...ang(pitch, bearing), duration: 2800, essential: true });
   switch (name) {
     case 'city': return fly([P.vxo_resc.lon - 0.03, P.vxo_resc.lat + 0.006], 12.6, 55, -70);
     case 'crash': return fly(c, 14.3, 58, -35);
@@ -815,7 +819,7 @@ function camera(name) {
         b.extend(toLngLat(p.x, p.z));
         const d = S.scene.places[p.seg.dest]; if (d) b.extend([d.lon, d.lat]);
       }
-      return map.fitBounds(b, { padding: 60, maxZoom: 11, pitch: 35, bearing: 0, duration: 2600, essential: true });
+      return map.fitBounds(b, { padding: 60, maxZoom: 11, ...ang(35, 0), duration: 2600, essential: true });
     }
     case 'none': return;
   }
@@ -844,15 +848,35 @@ function busChaseTick(now) {
   _bc.bearing += (((target - _bc.bearing + 540) % 360) - 180) * Math.min(1, dt * 1.5);
   const k = smooth(0, 1, (now - _bc.start) / 2200), f = _bc.from;
   const lerp = (a, b) => a + (b - a) * k;
+  if (S.fixedCam) {   // track the bus position only; angle never changes
+    const c = map.getCenter(), a = Math.min(1, dt * 2.5) * k;
+    map.jumpTo({ center: [c.lng + (ctr.lng - c.lng) * a, c.lat + (ctr.lat - c.lat) * a],
+                 zoom: lerp(f.zoom, 14), ...FIXED_ANGLE });
+    return;
+  }
   const db = ((_bc.bearing - f.bearing + 540) % 360) - 180;
   map.jumpTo({ center: [lerp(f.lng, ctr.lng), lerp(f.lat, ctr.lat)], zoom: lerp(f.zoom, 14.8),
                pitch: lerp(f.pitch, 60), bearing: f.bearing + db * k });
 }
 function setAutoCam(on) {
   S.autoCam = on;
+  if (!on && S.fixedCam) setFixedCam(false);
   try { localStorage.setItem('rv25.autocam', on ? '1' : '0'); } catch (_) { /* ignore */ }
   const cb = document.getElementById('chkAutoCam'); if (cb) cb.checked = on;
   if (!on && map.isMoving()) map.stop();
+}
+function setFixedCam(on) {
+  S.fixedCam = on;
+  try { localStorage.setItem('rv25.fixedcam', on ? '1' : '0'); } catch (_) { /* ignore */ }
+  document.getElementById('btnFixedCam')?.classList.toggle('on', on);
+  if (on) {
+    if (!S.autoCam) setAutoCam(true);
+    if (!map) return;
+    map.stop(); _bc.active = false;
+    const i = currentEventIdx(S.t), cam = i >= 0 ? events[i].cam : 'city';
+    if (S.follow || busChaseWindow(S.t) || cam === 'none') map.easeTo({ ...FIXED_ANGLE, duration: 1200 });
+    else camera(cam);
+  }
 }
 function setFollow(id) {
   S.follow = id;
@@ -1021,8 +1045,8 @@ function focusAction() {
   if (!pts.length) { const i = currentEventIdx(S.t); return camera(i >= 0 ? events[i].cam : 'city'); }
   const b = new maplibregl.LngLatBounds(pts[0], pts[0]);
   for (const q of pts) b.extend(q);
-  map.fitBounds(b, { padding: 70, maxZoom: pts.length === 1 ? 14.5 : 15.5, pitch: 45,
-                     bearing: map.getBearing(), duration: 1800, essential: true });
+  map.fitBounds(b, { padding: 70, maxZoom: pts.length === 1 ? 14.5 : 15.5, ...ang(45, map.getBearing()),
+                     duration: 1800, essential: true });
 }
 function setCompact(on) {
   document.body.classList.toggle('compact', on);
@@ -1285,6 +1309,10 @@ function wireUI() {
   try { ac = localStorage.getItem('rv25.autocam') !== '0'; } catch (_) { /* private mode */ }
   setAutoCam(ac);
   document.getElementById('chkAutoCam').onchange = e => setAutoCam(e.target.checked);
+  let fc = true;   // fixed camera is the default; only an explicit opt-out turns it off
+  try { fc = localStorage.getItem('rv25.fixedcam') !== '0'; } catch (_) { /* private mode */ }
+  document.getElementById('btnFixedCam').onclick = () => setFixedCam(!S.fixedCam);
+  setFixedCam(fc);
   const modes = ['sv', 'en'];
   const applyLang = l => {
     setLang(l); relabelAll();
@@ -1353,6 +1381,7 @@ ${h.label ? t('tip_follow') : h.seg ? t('gantt_seg_tip') : ''}`;
     else if (e.code === 'Escape') { setFollow(null); showAbout(false); }
     else if (e.code === 'KeyF') focusAction();
     else if (e.code === 'KeyC') setAutoCam(!S.autoCam);
+    else if (e.code === 'KeyV') setFixedCam(!S.fixedCam);
     else if (e.code === 'KeyT') setCompact(!document.body.classList.contains('compact'));
   });
   // A mouse/touch press on the map ends follow mode; the wheel only pauses
@@ -1420,6 +1449,6 @@ async function main() {
     document.getElementById('loading').classList.add('hidden');
     requestAnimationFrame(tick);
   });
-  window.__rv25 = { S, map, missions, seek, setPlaying, camera, PICK: () => PICK, screenOf, setFollow };   // for capture scripts
+  window.__rv25 = { S, map, missions, seek, setPlaying, camera, PICK: () => PICK, screenOf, setFollow, setFixedCam };   // for capture scripts
 }
 main();
